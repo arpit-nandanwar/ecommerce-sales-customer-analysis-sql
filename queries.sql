@@ -59,3 +59,48 @@ INNER JOIN order_items oi
 WHERE o.order_status = 'Completed'
 GROUP BY c.customer_id, c.full_name, c.city
 ORDER BY total_spent DESC;
+
+-- 5. High-revenue product categories using GROUP BY and HAVING
+SELECT
+    p.category,
+    COUNT(DISTINCT oi.order_id) AS total_orders,
+    SUM(oi.quantity) AS total_units_sold,
+    SUM(oi.line_total) AS total_sales_revenue
+FROM products p
+INNER JOIN order_items oi
+    ON p.product_id = oi.product_id
+INNER JOIN orders o
+    ON oi.order_id = o.order_id
+WHERE o.order_status = 'Completed'
+GROUP BY p.category
+HAVING SUM(oi.line_total) > 3000.00
+ORDER BY total_sales_revenue DESC;
+
+-- 6. Customers spending above average completed order value using a subquery
+SELECT
+    c.customer_id,
+    c.full_name,
+    c.city,
+    SUM(oi.line_total) AS total_spent
+FROM customers c
+INNER JOIN orders o
+    ON c.customer_id = o.customer_id
+INNER JOIN order_items oi
+    ON o.order_id = oi.order_id
+WHERE o.order_status = 'Completed'
+GROUP BY c.customer_id, c.full_name, c.city
+HAVING SUM(oi.line_total) > (
+    SELECT AVG(order_total)
+    FROM (
+        SELECT
+            o2.order_id,
+            SUM(oi2.line_total) AS order_total
+        FROM orders o2
+        INNER JOIN order_items oi2
+            ON o2.order_id = oi2.order_id
+        WHERE o2.order_status = 'Completed'
+        GROUP BY o2.order_id
+    ) completed_orders
+)
+ORDER BY total_spent DESC;
+
